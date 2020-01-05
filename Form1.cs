@@ -1,18 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-using System.Globalization;
-using System.Windows.Forms;
-using System.Diagnostics;
-using System.Net;
 using System.IO;
+using System.Net;
 using System.Threading;
-using System.Drawing;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace WindowsFormsApp1
 {
@@ -22,18 +14,6 @@ namespace WindowsFormsApp1
         {
             InitializeComponent();
             this.WindowState = FormWindowState.Maximized;
-        }
-
-
-        public void getData()
-        {
-            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=getlightswitches&username=dGVzdA==&password=dGVzdA==");
-            WebResponse webResponse = request.GetResponse();
-            var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
-            dynamic valueJson = JValue.Parse(responseText);
-            //JObject jobject = JObject.parse(responseText);
-            var resultOne = valueJson["result"][1]["idx"].ToString();
-            label1.Text = resultOne;
         }
 
         private HttpWebRequest GetRequest(string url, string httpMethod = "GET", bool allowAutoRedirect = true)
@@ -47,27 +27,93 @@ namespace WindowsFormsApp1
             return request;
         }
 
-        private void GetSwitchesInfo_Click(object sender, EventArgs e)
+        private string statusString;
+
+        private async Task programStart()
         {
-            getData();
+            while (checkBox2.Checked)
+            {
+                await Task.Delay(1000);
+                getStatusTeddy();
+                getStatusFriet();
+                getStatusSuikerspin();
+            }
         }
 
-        private void PutLightOff_Click(object sender, EventArgs e)
+
+        private void getStatusTeddy()
         {
-            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=2&switchcmd=Off&username=dGVzdA==&password=dGVzdA==");
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=getuservariable&idx=3");
+            WebResponse webResponse = request.GetResponse();
+            var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
+            dynamic valueJson = JToken.Parse(responseText);
+            var resultOne = valueJson["status"][0]["Value"].ToString();
+            statusString = "Teddyberen: " + resultOne;
+            if (Convert.ToInt32(resultOne) <= 7 && checkBox1.Checked == false)
+            {
+                checkBox1.Checked = true;
+                RunRoute();
+            }
+        }
+
+        private void getStatusFriet()
+        {
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=getuservariable&idx=5");
             WebResponse webResponse = request.GetResponse();
             var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
             dynamic valueJson = JToken.Parse(responseText);
             var resultOne = valueJson["status"].ToString();
-            label1.Text = resultOne;
+            statusString += "friet (kg): " + resultOne;
+            if (Convert.ToInt32(resultOne) <= 10 && checkBox1.Checked == false)
+            {
+                checkBox1.Checked = true;
+                RunRoute();
+            }
         }
 
-        private void PutLightOn_Click(object sender, EventArgs e)
+        private void getStatusSuikerspin()
         {
-            putLightsOn();
-            RunRoute();
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=getuservariable&idx=6");
+            WebResponse webResponse = request.GetResponse();
+            var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
+            dynamic valueJson = JToken.Parse(responseText);
+            var resultOne = valueJson["status"].ToString();
+            statusString += "Suikerspin (kg): " + resultOne;
+            label1.Text = statusString;
+            if (Convert.ToInt32(resultOne) <= 3 && checkBox1.Checked == false)
+            {
+                checkBox1.Checked = true;
+                RunRoute();
+            }
         }
 
+        private void resetFunction()
+        {
+            resetFriet();
+            resetSuiker();
+            resetTeddy();
+        }
+
+        private void resetSuiker()
+        {
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=31&switchcmd=On");
+            WebResponse webResponse = request.GetResponse();
+        }
+
+        private void resetFriet()
+        {
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=24&switchcmd=On");
+            WebResponse webResponse = request.GetResponse();
+        }
+
+        private void resetTeddy()
+        {
+            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=33&switchcmd=On");
+            WebResponse webResponse = request.GetResponse();
+        }
+
+
+        #region route
         private async void RunRoute()
         {
             for (int i = 0; i < 213; i++)
@@ -258,63 +304,11 @@ namespace WindowsFormsApp1
             {
                 await ChangePictureBoxLeft();
             }
+            resetFunction();
         }
+        #endregion route
 
-        private void putLightsOn()
-        {
-            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=24&switchcmd=On&username=dGVzdA==&password=dGVzdA==");
-            WebResponse webResponse = request.GetResponse();
-            var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
-            dynamic valueJson = JToken.Parse(responseText);
-            var resultOne = valueJson["status"].ToString();
-                label1.Text = resultOne;
-        }
-
-        private void putLightsOff()
-        {
-            HttpWebRequest request = GetRequest("http://localhost:8080/json.htm?type=command&param=switchlight&idx=24&switchcmd=Off&username=dGVzdA==&password=dGVzdA==");
-            WebResponse webResponse = request.GetResponse();
-            var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
-            dynamic valueJson = JToken.Parse(responseText);
-            var resultOne = valueJson["status"].ToString();
-            label1.Text = resultOne;
-        }
-
-        private void CheckBox1_CheckedChanged(object sender, EventArgs e)
-        {
-            if (checkBox1.Checked == true)
-            {
-                putLightsOn();
-
-                progressBar1.Value = 0;
-                progressBar1.Minimum = 0;
-                progressBar1.Maximum = 100;
-                progressBar1.Step = 10;
-
-                for (int i = 0; i < 100; i++)
-                {
-                    progressBar1.PerformStep();
-                }
-            }
-            else
-            {
-                putLightsOff();
-
-                progressBar1.Value = 100;
-
-                for (int i = 0; i < 100; i++)
-                {
-                    Thread.Sleep(5);
-                    progressBar1.Value -= 1;
-
-
-                }
-
-            }
-
-
-        }
-
+        #region directions
         private async Task ChangePictureBoxUp()
         {
             await Task.Delay(1);
@@ -338,10 +332,24 @@ namespace WindowsFormsApp1
             await Task.Delay(1);
             pictureBox1.Left += 1;
         }
-
+        #endregion
         private void Form1_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private async void button1_Click(object sender, EventArgs e)
+        {
+            label1.Text = "Programma gestart";
+            checkBox2.Checked = true;
+            await programStart();
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            label1.Text = "Programma beëindigd";
+            checkBox2.Checked = false;
         }
     }
 }
