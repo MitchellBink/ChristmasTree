@@ -62,7 +62,7 @@ namespace WindowsFormsApp1
             WebResponse webResponse = request.GetResponse();
             var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
             dynamic valueJson = JToken.Parse(responseText);
-            var resultOne = valueJson["status"].ToString();
+            var resultOne = valueJson["status"][0]["Value"].ToString();
             statusString += "friet (kg): " + resultOne;
             if (Convert.ToInt32(resultOne) <= 10 && checkBox1.Checked == false)
             {
@@ -77,7 +77,7 @@ namespace WindowsFormsApp1
             WebResponse webResponse = request.GetResponse();
             var responseText = new StreamReader(webResponse.GetResponseStream()).ReadToEnd();
             dynamic valueJson = JToken.Parse(responseText);
-            var resultOne = valueJson["status"].ToString();
+            var resultOne = valueJson["status"][0]["Value"].ToString();
             statusString += "Suikerspin (kg): " + resultOne;
             label1.Text = statusString;
             if (Convert.ToInt32(resultOne) <= 3 && checkBox1.Checked == false)
